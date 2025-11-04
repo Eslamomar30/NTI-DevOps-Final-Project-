@@ -1,0 +1,52 @@
+- hosts: jenkins
+  become: yes
+  vars:
+    jenkins_plugins:
+      - git
+      - pipeline
+      - kubernetes
+      - docker-plugin
+      - credentials
+  tasks:
+    - name: install dependencies
+      yum:
+        name: [java-11-openjdk, git]
+        state: present
+
+    - name: add jenkins repo
+      get_url:
+        url: https://pkg.jenkins.io/redhat-stable/jenkins.repo
+        dest: /etc/yum.repos.d/jenkins.repo
+
+    - name: import jenkins key
+      rpm_key:
+        state: present
+        key: https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+
+    - name: install jenkins
+      yum:
+        name: jenkins
+        state: present
+
+    - name: start jenkins
+      systemd:
+        name: jenkins
+        state: started
+        enabled: yes
+
+    - name: install plugins
+      jenkins_plugin:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ jenkins_plugins }}"
+
+    - name: ensure docker installed for building images
+      yum:
+        name: docker
+        state: present
+
+    - name: start docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes

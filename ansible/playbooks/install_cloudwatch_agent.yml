@@ -1,0 +1,28 @@
+- hosts: all_ec2
+  become: yes
+  tasks:
+    - name: download cloudwatch agent
+      get_url:
+        url: https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
+        dest: /tmp/amazon-cloudwatch-agent.rpm
+
+    - name: install cloudwatch agent
+      yum:
+        name: /tmp/amazon-cloudwatch-agent.rpm
+        state: present
+
+    - name: put config file
+      copy:
+        dest: /opt/aws/amazon-cloudwatch-agent/bin/config.json
+        content: |
+          {
+            "metrics": {
+              "metrics_collected": {
+                "cpu": { "measurement": ["cpu_usage_idle"] },
+                "mem": { }
+              }
+            }
+          }
+
+    - name: start cloudwatch agent
+      shell: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json -s
